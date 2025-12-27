@@ -5,7 +5,10 @@
 // @author      Michael and Ian (modified with Config Toggles)
 // @match       https://lichess.org/*
 // @icon        https://www.google.com/s2/favicons?sz=64&domain=lichess.org
-// @grant       none
+// @grant        GM_xmlhttpRequest
+// @grant        unsafeWindow
+// @connect      localhost
+// @connect      127.0.0.1
 // @run-at      document-start
 // @updateURL   https://github.com/mchappychen/lichess-funnies/blob/main/lichess.user.js
 // @downloadURL https://github.com/mchappychen/lichess-funnies/blob/main/lichess.user.js
@@ -21,6 +24,7 @@
 // --- socket wrapper ---
 let webSocketWrapper = null;
 let currentAck = 0;
+const TrueNativeWebSocket = unsafeWindow.WebSocket; // Truly native WebSocket for CSP bypass
 const NativeWebSocket = window.WebSocket; // Save reference to native WebSocket
 const webSocketProxy = new Proxy(window.WebSocket, {
   construct: function(target, args) {
@@ -398,7 +402,7 @@ function resetStats() {
 
 // --- External Engine WebSocket ---
 function connectExternalEngine() {
-  if (externalEngineWs && (externalEngineWs.readyState === NativeWebSocket.CONNECTING || externalEngineWs.readyState === NativeWebSocket.OPEN)) {
+  if (externalEngineWs && (externalEngineWs.readyState === TrueNativeWebSocket.CONNECTING || externalEngineWs.readyState === TrueNativeWebSocket.OPEN)) {
     console.log('[ExtEngine] Already connected or connecting');
     return;
   }
@@ -406,7 +410,7 @@ function connectExternalEngine() {
   console.log('[ExtEngine] Connecting to', externalEngineUrl);
   
   try {
-    externalEngineWs = new NativeWebSocket(externalEngineUrl);
+    externalEngineWs = new TrueNativeWebSocket(externalEngineUrl);
     
     externalEngineWs.onopen = () => {
       console.log('[ExtEngine] ✅ Connected');
