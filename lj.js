@@ -431,7 +431,7 @@ function connectExternalEngine() {
     };
     
     externalEngineWs.onmessage = (e) => {
-      const data = String(e.data || '');
+      const data = e.data;
       console.log('[ExtEngine]', data);
       
       if (data.startsWith('iam ')) {
@@ -464,7 +464,6 @@ function connectExternalEngine() {
       console.log('[ExtEngine] Disconnected');
       externalEngineConnected = false;
       externalEngineReady = false;
-      engineReady = !useExternalEngine; // Fallback to local engine
       
       // Auto-reconnect if external engine is enabled
       if (useExternalEngine) {
@@ -479,7 +478,6 @@ function connectExternalEngine() {
     console.error('[ExtEngine] Failed to connect:', err);
     externalEngineConnected = false;
     externalEngineReady = false;
-    engineReady = !useExternalEngine; // Fallback to local engine
   }
 }
 
@@ -543,7 +541,7 @@ function configureEngine() {
         if (!externalEngineReady) {
           console.log('[Engine] External engine timeout, falling back to local');
           useExternalEngine = false;
-          engineReady = false;
+          localStorage.setItem('useExternalEngine', '0');
           configureLocalEngine().then(resolve);
         }
       }, 5000);
@@ -1182,7 +1180,7 @@ async function run() {
     } else {
       // Switch back to local engine
       disconnectExternalEngine();
-      engineReady = true;
+      configureLocalEngine();
     }
     
     updateExtEngineBtn();
@@ -1203,7 +1201,14 @@ async function run() {
   extConfigBtn.onclick = () => {
     const newUrl = prompt('External Engine WebSocket URL:', externalEngineUrl);
     if (newUrl && newUrl.trim()) {
-      externalEngineUrl = newUrl.trim();
+      const url = newUrl.trim();
+      // Validate WebSocket URL format
+      if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
+        alert('Invalid WebSocket URL. Must start with ws:// or wss://');
+        return;
+      }
+      
+      externalEngineUrl = url;
       localStorage.setItem('externalEngineUrl', externalEngineUrl);
       console.log('[ExtEngine] URL updated to:', externalEngineUrl);
       
