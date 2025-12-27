@@ -15,6 +15,8 @@ Lichess's CSP normally blocks WebSocket connections to localhost, which prevents
 5. The extension should now appear in your extensions list
 6. Refresh any open Lichess.org tabs
 
+**Note**: If you're updating the extension, click the refresh icon (🔄) on the extension card in `chrome://extensions/` after pulling the latest changes, then reload any open Lichess.org tabs.
+
 ## Usage
 
 Once installed, the extension automatically:
@@ -40,11 +42,15 @@ To verify the extension is working:
 
 1. Open Lichess.org
 2. Open Chrome DevTools (F12)
-3. Go to the **Network** tab
-4. Reload the page
-5. Click on the main document request
-6. Check the **Headers** section
-7. The `Content-Security-Policy` header should not be present in the response headers
+3. Go to the **Console** tab
+4. You should see a message like `[CSP Bypass] Removed CSP meta tag`
+5. Go to the **Elements** tab and inspect the `<head>` section
+6. Verify there is no `<meta http-equiv="Content-Security-Policy">` tag present
+7. Alternatively, check the **Network** tab:
+   - Reload the page
+   - Click on the main document request
+   - Check the **Headers** section
+   - The `Content-Security-Policy` header should not be present (if it was being sent via HTTP)
 
 ## Troubleshooting
 
@@ -65,16 +71,24 @@ To verify the extension is working:
 
 ## Technical Details
 
-This extension uses Chrome's `declarativeNetRequest` API to:
-- Remove the `Content-Security-Policy` header from responses
-- Remove the `Content-Security-Policy-Report-Only` header from responses
-- Target only Lichess.org domains (`lichess.org` and `www.lichess.org`)
-- Apply to main frames and sub-frames
+This extension uses two approaches to bypass CSP:
+
+1. **Content Script** (Primary method):
+   - Runs at `document_start` to execute before the page loads
+   - Removes CSP `<meta>` tags from the HTML before the browser parses them
+   - Uses a MutationObserver to catch dynamically added CSP meta tags
+   - Runs in all frames to handle iframes
+
+2. **declarativeNetRequest API** (Fallback):
+   - Removes CSP headers from HTTP responses (if any)
+   - Applies to main frames and sub-frames
+
+The extension targets only Lichess.org domains (`lichess.org` and `www.lichess.org`).
 
 The extension requires these permissions:
-- `declarativeNetRequest` - To modify headers
+- `declarativeNetRequest` - To modify HTTP headers
 - `declarativeNetRequestWithHostAccess` - To use host permissions with declarativeNetRequest
-- `host_permissions` for `*://lichess.org/*` - To access Lichess.org pages
+- `host_permissions` for `*://lichess.org/*` - To access and modify Lichess.org pages
 
 ## Uninstallation
 
