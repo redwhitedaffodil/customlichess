@@ -148,25 +148,49 @@ To verify the extension is working:
 
 ## Technical Details
 
-This extension integrates the entire Lichess Funnies userscript directly:
+This extension uses a **background service worker architecture** to bypass CSP restrictions for external engine WebSocket connections:
 
-1. **Injector Script** (injector.js):
-   - Runs at `document_start` as a content script
-   - Removes CSP `<meta>` tags from the HTML before the browser parses them
-   - Uses a MutationObserver to catch dynamically added CSP meta tags
-   - Sequentially injects chess.js, stockfish.js, and lj.js into the page context
+### Architecture
 
-2. **Script Injection**:
-   - Scripts are marked as `web_accessible_resources` in the manifest
-   - Injected scripts run in the page context (not the isolated content script context)
-   - This allows them to interact with Lichess's JavaScript and bypass CSP
+```
+[Lichess Page] <--postMessage--> [Content Script] <--chrome.runtime--> [Background Worker] <--WebSocket--> [External Engine]
+```
+
+### Components
+
+1. **Background Service Worker** (background.js):
+   - Runs in a privileged context with **NO CSP restrictions**
+   - Manages WebSocket connections to external engines
+   - Relays engine commands/responses between content script and external engine
+   - Maintains connection state and handles reconnection logic
+
+2. **Content Script** (content.js):
+   - Runs at `document_start` in an isolated context
+   - Bridges communication between the page and background worker
+   - Uses `chrome.runtime.connect()` to establish a persistent connection to background
+   - Uses `window.postMessage()` to communicate with the injected script
+   - Injects chess.js, stockfish.js, and inject.js into the page context
+
+3. **Injected Script** (inject.js):
+   - Runs in the page context (can interact with Lichess's JavaScript)
+   - Modified version of the main userscript with external engine code replaced
+   - Uses `window.postMessage()` instead of direct WebSocket connections
+   - All engine commands are relayed through the background service worker
 
 The extension targets only Lichess.org domains (`lichess.org` and `www.lichess.org`).
 
-Required permissions:
-- `scripting` - To inject scripts into the page
+### Required Permissions
+
 - `storage` - To store user preferences
-- `host_permissions` for `*://lichess.org/*` - To access and modify Lichess.org pages
+- `host_permissions` for:
+  - `*://lichess.org/*` - To access Lichess.org pages
+  - `*://www.lichess.org/*` - To access www.lichess.org pages
+  - `ws://localhost/*` - To connect to local WebSocket servers
+  - `ws://127.0.0.1/*` - To connect to local WebSocket servers
+
+### Why This Approach?
+
+Even with `web_accessible_resources`, injected scripts still run under the page's Content Security Policy (CSP). Lichess's CSP blocks WebSocket connections to external hosts. By moving the WebSocket connection to the background service worker (which has no CSP restrictions), we completely bypass these limitations while maintaining full functionality.
 
 ## Uninstallation
 
