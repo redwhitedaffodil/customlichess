@@ -11,3 +11,6 @@ test-*.html
 # OS files
 .DS_Store
 Thumbs.db
+
+# Build artifacts
+inter/chesshook-intermediary
