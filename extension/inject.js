@@ -8,8 +8,6 @@
 // --- socket wrapper ---
 let webSocketWrapper = null;
 let currentAck = 0;
-const TrueNativeWebSocket = window.WebSocket; // Native WebSocket in page context
-const NativeWebSocket = window.WebSocket; // Save reference to native WebSocket
 const webSocketProxy = new Proxy(window.WebSocket, {
   construct: function(target, args) {
     let ws = new target(...args);
@@ -107,7 +105,7 @@ window.addEventListener('message', (e) => {
 });
 
 function sendToExternalEngine(cmd) {
-  window.postMessage({ source: 'lichess-ext-page', type: 'send', data: cmd }, '*');
+  window.postMessage({ source: 'lichess-ext-page', type: 'send', data: cmd }, window.location.origin);
 }
 
 // --- CONFIG PRESETS ---
@@ -450,7 +448,7 @@ function resetStats() {
 // --- External Engine WebSocket ---
 function connectExternalEngine() {
   console.log('[ExtEngine] Connecting via background...');
-  window.postMessage({ source: 'lichess-ext-page', type: 'connect', url: externalEngineUrl }, '*');
+  window.postMessage({ source: 'lichess-ext-page', type: 'connect', url: externalEngineUrl }, window.location.origin);
 }
 
 function disconnectExternalEngine() {
@@ -459,7 +457,7 @@ function disconnectExternalEngine() {
     externalEngineReconnectTimer = null;
   }
   
-  window.postMessage({ source: 'lichess-ext-page', type: 'disconnect' }, '*');
+  window.postMessage({ source: 'lichess-ext-page', type: 'disconnect' }, window.location.origin);
   externalEngineConnected = false;
   externalEngineReady = false;
 }

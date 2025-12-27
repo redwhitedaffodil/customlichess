@@ -6,7 +6,7 @@ function connectToBackground() {
   
   port.onMessage.addListener((msg) => {
     // Forward to page
-    window.postMessage({ source: 'lichess-ext-bg', ...msg }, '*');
+    window.postMessage({ source: 'lichess-ext-bg', ...msg }, window.location.origin);
   });
   
   port.onDisconnect.addListener(() => {
