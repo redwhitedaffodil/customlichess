@@ -47,6 +47,10 @@ var externalEngineReady = false;
 var externalEngineConnected = false;
 var externalEngineReconnectTimer = null;
 
+// --- Engine Constants ---
+const SF_THREADS = 4;
+const sfListeners = new Set();
+
 // --- PostMessage Bridge for External Engine ---
 // Listen for messages from background (via content script)
 window.addEventListener('message', (e) => {
@@ -461,9 +465,6 @@ function disconnectExternalEngine() {
 }
 
 // --- Stockfish ---
-const SF_THREADS = 4;
-const sfListeners = new Set();
-
 stockfish.onmessage = (e) => {
   const data = String(e.data || '');
   if (data === 'readyok') {
