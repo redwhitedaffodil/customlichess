@@ -106,6 +106,27 @@ The script will:
 - Gracefully fallback to local WASM engine if external connection fails
 - Display connection status via the button color
 
+#### 5. CSP Bypass Required
+
+**Problem**: Lichess's Content Security Policy (CSP) blocks WebSocket connections to localhost, preventing the external engine from connecting. You'll see an error like:
+
+```
+Refused to connect to 'ws://localhost:8080/ws' because it violates the following 
+Content Security Policy directive: "connect-src wss://0.peerjs.com 'self' blob: 
+data: lichess1.org wss://socket0.lichess.org..."
+```
+
+**Solution**: Install a browser extension to bypass CSP when using the external engine.
+
+**Chrome Extensions**:
+- [Disable Content-Security-Policy](https://chrome.google.com/webstore/detail/disable-content-security/ieelmcmcagommplceebfedjlakkhpden) - Simple on/off toggle
+- [ModHeader](https://chrome.google.com/webstore/detail/modheader/idgpnmonknjnojddfkpgkljpfnnfcklj) - Alternative with more features
+
+**Firefox Extensions**:
+- [Disable CSP](https://addons.mozilla.org/en-US/firefox/addon/disable-csp/) - Simple on/off toggle
+
+**⚠️ Security Warning**: Only enable the CSP bypass extension when using the external engine script. Disable it when browsing normally, as CSP is an important browser security feature that protects against cross-site scripting and other attacks.
+
 ### Protocol Details
 
 The chesshook-intermediary protocol uses these commands:
