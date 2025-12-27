@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>lj.js UI Button Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background: #312e2b;
+            color: white;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 { color: #f0d9b5; }
+        h2 { color: #b58863; margin-top: 30px; }
+        
+        /* Mimic the floating dock */
+        #lf-bottom-dock {
+            position: fixed;
+            left: 50%;
+            bottom: 8px;
+            transform: translateX(-50%);
+            z-index: 999999;
+        }
+        
+        .dock-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 8px;
+            background: rgba(0,0,0,0.35);
+            border-radius: 12px;
+            backdrop-filter: blur(4px);
+        }
+        
+        .fbt {
+            background: rgba(240, 217, 181, 0.15);
+            color: white;
+            border: 1px solid #b58863;
+            padding: 4px 8px;
+            margin: 0;
+            cursor: pointer;
+            font-size: 11px;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .fbt:hover {
+            background: rgba(240, 217, 181, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .demo-section {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #b58863;
+        }
+        
+        .button-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+        
+        .status-demo {
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 lj.js UI Enhancement Demo</h1>
+        
+        <div class="demo-section">
+            <h2>📦 Complete Button Toolbar</h2>
+            <p>This is how the complete floating dock appears at the bottom of Lichess:</p>
+            <div class="button-row">
+                <button class="fbt">▼</button>
+                <button class="fbt">Hint</button>
+                <button class="fbt" style="background-color: green;">Auto-ON</button>
+                <button class="fbt" style="background-color: #A93226; font-size: 10px;">Cfg: 15s</button>
+                <button class="fbt" style="font-size: 10px; opacity: 1;">Arr-ON</button>
+                <button class="fbt" style="font-size: 9px;">Piece-OFF</button>
+                <button class="fbt" style="font-size: 9px; background-color: #E74C3C;">Human-ON</button>
+                <button class="fbt" style="font-size: 9px; background-color: #9B59B6;">Vary-ON</button>
+                <button class="fbt" style="font-size: 9px; background-color: #27AE60;">Ext-✓</button>
+                <button class="fbt" style="font-size: 11px; padding: 2px 6px;">⚙️</button>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>🔌 New: External Engine Buttons</h2>
+            
+            <h3>Status: Disconnected (Default)</h3>
+            <div class="button-row">
+                <button class="fbt" style="font-size: 9px;">Ext-OFF</button>
+                <button class="fbt" style="font-size: 11px; padding: 2px 6px;">⚙️</button>
+                <span style="margin-left: 10px; color: #888;">Local WASM engine active</span>
+            </div>
+            
+            <h3>Status: Connected ✅</h3>
+            <div class="button-row">
+                <button class="fbt" style="font-size: 9px; background-color: #27AE60;">Ext-✓</button>
+                <button class="fbt" style="font-size: 11px; padding: 2px 6px;">⚙️</button>
+                <span style="margin-left: 10px; color: #27AE60;">✅ External engine connected (ws://localhost:8080/ws)</span>
+            </div>
+            
+            <h3>Status: Reconnecting 🔄</h3>
+            <div class="button-row">
+                <button class="fbt" style="font-size: 9px; background-color: #F39C12;">Ext-⟳</button>
+                <button class="fbt" style="font-size: 11px; padding: 2px 6px;">⚙️</button>
+                <span style="margin-left: 10px; color: #F39C12;">⟳ Attempting to connect...</span>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>🎯 Button Functions</h2>
+            <div class="status-demo">
+                <strong>Ext-OFF/✓/⟳</strong> - Toggle external engine on/off
+                <ul>
+                    <li><strong>Gray (OFF)</strong>: Using local WASM Stockfish</li>
+                    <li><strong>Green (✓)</strong>: Connected to external engine</li>
+                    <li><strong>Orange (⟳)</strong>: Reconnecting to external engine</li>
+                </ul>
+            </div>
+            <div class="status-demo">
+                <strong>⚙️</strong> - Configure WebSocket URL
+                <ul>
+                    <li>Opens prompt to enter URL</li>
+                    <li>Default: <code>ws://localhost:8080/ws</code></li>
+                    <li>Validates format (must start with ws:// or wss://)</li>
+                    <li>Saves to localStorage</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>⌨️ Keyboard Shortcuts</h2>
+            <div class="status-demo">
+                <ul>
+                    <li><strong>w</strong> - Toggle hint + auto mode</li>
+                    <li><strong>p</strong> - Toggle piece selection mode</li>
+                    <li><strong>h</strong> - Toggle human mode</li>
+                    <li><strong>v</strong> - Toggle varied mode</li>
+                    <li><strong>e</strong> - Toggle external engine ⭐ NEW</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>📊 How It Works</h2>
+            <pre style="background: #000; padding: 15px; border-radius: 4px; overflow-x: auto;">
+┌─────────────────────────────────────────┐
+│        Lichess Game (Browser)           │
+│                                         │
+│  ┌───────────────────────────────────┐ │
+│  │    lj.js UserScript               │ │
+│  │                                   │ │
+│  │  sendToEngine() ───┬──────────┐  │ │
+│  │                    │          │  │ │
+│  │    Local ◄─────────┘          │  │ │
+│  │   (WASM)                      │  │ │
+│  │                               │  │ │
+│  │                               │  │ │
+│  │                        WebSocket  │ │
+│  │                               │  │ │
+│  └───────────────────────────────┼───┘ │
+└────────────────────────────────┼──────┘
+                                 │
+                                 ▼
+              ws://localhost:8080/ws
+                                 │
+                                 ▼
+           ┌─────────────────────────┐
+           │ chesshook-intermediary  │
+           │                         │
+           │ • Protocol handler      │
+           │ • Command routing       │
+           │ • Output subscription   │
+           └──────────┬──────────────┘
+                      │
+                      ▼
+           ┌─────────────────────────┐
+           │   Chess Engine          │
+           │   (Stockfish, etc.)     │
+           └─────────────────────────┘
+            </pre>
+        </div>
+        
+        <div class="demo-section">
+            <h2>✨ Features Implemented</h2>
+            <ul>
+                <li>✅ WebSocket connection to external engines</li>
+                <li>✅ chesshook-intermediary protocol support</li>
+                <li>✅ Engine abstraction layer (sendToEngine)</li>
+                <li>✅ UI toggle with status indication</li>
+                <li>✅ Auto-reconnect on disconnect</li>
+                <li>✅ Graceful fallback to local engine</li>
+                <li>✅ Configurable WebSocket URL</li>
+                <li>✅ Keyboard shortcut (e key)</li>
+                <li>✅ Full backward compatibility</li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Actual floating dock demo -->
+    <div id="lf-bottom-dock">
+        <div class="dock-bar">
+            <button class="fbt" style="font-size: 10px; padding: 2px 6px;">▼</button>
+            <button class="fbt">Hint</button>
+            <button class="fbt" style="background-color: green;">Auto-ON</button>
+            <button class="fbt" style="background-color: #A93226; font-size: 10px;">Cfg: 15s</button>
+            <button class="fbt" style="font-size: 10px; opacity: 1;">Arr-ON</button>
+            <button class="fbt" style="font-size: 9px;">Piece-OFF</button>
+            <button class="fbt" style="font-size: 9px; background-color: #E74C3C;">Human-ON</button>
+            <button class="fbt" style="font-size: 9px; background-color: #9B59B6;">Vary-ON</button>
+            <button class="fbt" style="font-size: 9px; background-color: #27AE60;" title="External Engine: Connected">Ext-✓</button>
+            <button class="fbt" style="font-size: 11px; padding: 2px 6px;" title="Configure External Engine">⚙️</button>
+        </div>
+    </div>
+    
+    <script>
+        // Add some interactivity
+        document.querySelectorAll('.fbt').forEach(btn => {
+            btn.addEventListener('mousedown', function() {
+                this.style.border = '2px solid #f0d9b5';
+                setTimeout(() => { this.style.border = ''; }, 200);
+            });
+        });
+    </script>
+</body>
+</html>

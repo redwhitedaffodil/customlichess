@@ -1,0 +1,13 @@
+# Test files
+test-*.html
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
