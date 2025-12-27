@@ -2,6 +2,49 @@
 
 A powerful Lichess.org UserScript that adds advanced features including support for external chess engines via WebSocket.
 
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Lichess.org                            │
+│                                                             │
+│  ┌───────────────────────────────────────────────────────┐ │
+│  │              lj.js UserScript                         │ │
+│  │                                                       │ │
+│  │  ┌─────────────────────────────────────────────────┐ │ │
+│  │  │     Engine Abstraction Layer                    │ │ │
+│  │  │     sendToEngine(cmd)                           │ │ │
+│  │  └──────────────┬─────────────────┬────────────────┘ │ │
+│  │                 │                 │                   │ │
+│  │         ┌───────▼────────┐ ┌─────▼──────────┐        │ │
+│  │         │ Local Engine   │ │ External Engine│        │ │
+│  │         │ (Stockfish     │ │ (WebSocket)    │        │ │
+│  │         │  WASM)         │ │                │        │ │
+│  │         └────────────────┘ └───────┬────────┘        │ │
+│  │                                    │                  │ │
+│  └────────────────────────────────────┼──────────────────┘ │
+└─────────────────────────────────────┼────────────────────┘
+                                       │
+                                       │ WebSocket
+                                       │ ws://localhost:8080/ws
+                                       │
+                          ┌────────────▼──────────────┐
+                          │  chesshook-intermediary   │
+                          │                           │
+                          │  Protocol Commands:       │
+                          │  • sub                    │
+                          │  • whoareyou              │
+                          │  • whatengine             │
+                          │  • auth <passkey>         │
+                          │  • UCI commands           │
+                          └────────────┬──────────────┘
+                                       │
+                          ┌────────────▼──────────────┐
+                          │  Chess Engine             │
+                          │  (Stockfish, Leela, etc.) │
+                          └───────────────────────────┘
+```
+
 ## Features
 
 - **Local Stockfish WASM Engine**: Built-in chess engine for immediate use

@@ -556,11 +556,11 @@ function configureEngine() {
 function configureLocalEngine() {
   return new Promise((resolve) => {
     console.log('[Engine] Configuring local Stockfish...');
-    sendToEngine('uci');
-    sendToEngine('setoption name Threads value 1');
-    sendToEngine('setoption name Contempt value 20');
-    sendToEngine(`setoption name MultiPV value ${SF_THREADS}`);
-    sendToEngine('isready');
+    stockfish.postMessage('uci');
+    stockfish.postMessage('setoption name Threads value 1');
+    stockfish.postMessage('setoption name Contempt value 20');
+    stockfish.postMessage(`setoption name MultiPV value ${SF_THREADS}`);
+    stockfish.postMessage('isready');
 
     const checkReady = setInterval(() => {
       if (engineReady) {
