@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Lichess External Engine CSP Bypass",
+  "version": "1.0",
+  "description": "Allows WebSocket connections to localhost for external chess engine",
+  "permissions": [
+    "declarativeNetRequest",
+    "declarativeNetRequestWithHostAccess"
+  ],
+  "host_permissions": [
+    "*://lichess.org/*",
+    "*://www.lichess.org/*"
+  ],
+  "declarative_net_request": {
+    "rule_resources": [{
+      "id": "ruleset_1",
+      "enabled": true,
+      "path": "rules.json"
+    }]
+  },
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
