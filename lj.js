@@ -24,7 +24,7 @@
 // --- socket wrapper ---
 let webSocketWrapper = null;
 let currentAck = 0;
-const TrueNativeWebSocket = unsafeWindow.WebSocket; // Truly native WebSocket for CSP bypass
+const TrueNativeWebSocket = (typeof unsafeWindow !== 'undefined' ? unsafeWindow.WebSocket : null) || window.WebSocket; // Truly native WebSocket for CSP bypass
 const NativeWebSocket = window.WebSocket; // Save reference to native WebSocket
 const webSocketProxy = new Proxy(window.WebSocket, {
   construct: function(target, args) {
