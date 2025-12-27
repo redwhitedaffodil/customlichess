@@ -21,6 +21,7 @@
 // --- socket wrapper ---
 let webSocketWrapper = null;
 let currentAck = 0;
+const NativeWebSocket = window.WebSocket; // Save reference to native WebSocket
 const webSocketProxy = new Proxy(window.WebSocket, {
   construct: function(target, args) {
     let ws = new target(...args);
@@ -49,6 +50,14 @@ var pieceSelectMode = localStorage.getItem('pieceSelectMode') === "1";
 var humanMode = localStorage.getItem('humanMode') === "1";
 var variedMode = localStorage.getItem('variedMode') !== "0";
 var configMode = localStorage.getItem('configMode') || "15s";
+
+// --- External Engine Settings ---
+var useExternalEngine = localStorage.getItem('useExternalEngine') === "1";
+var externalEngineUrl = localStorage.getItem('externalEngineUrl') || "ws://localhost:8080/ws";
+var externalEngineWs = null;
+var externalEngineReady = false;
+var externalEngineConnected = false;
+var externalEngineReconnectTimer = null;
 
 // --- CONFIG PRESETS ---
 const PRESETS = {
@@ -387,6 +396,108 @@ function resetStats() {
   console.log('[Stats] Reset');
 }
 
+// --- External Engine WebSocket ---
+function connectExternalEngine() {
+  if (externalEngineWs && (externalEngineWs.readyState === NativeWebSocket.CONNECTING || externalEngineWs.readyState === NativeWebSocket.OPEN)) {
+    console.log('[ExtEngine] Already connected or connecting');
+    return;
+  }
+
+  console.log('[ExtEngine] Connecting to', externalEngineUrl);
+  
+  try {
+    externalEngineWs = new NativeWebSocket(externalEngineUrl);
+    
+    externalEngineWs.onopen = () => {
+      console.log('[ExtEngine] ✅ Connected');
+      externalEngineConnected = true;
+      externalEngineReady = false;
+      
+      // Subscribe to engine output
+      externalEngineWs.send('sub');
+      
+      // Query engine info
+      externalEngineWs.send('whoareyou');
+      externalEngineWs.send('whatengine');
+      
+      // Configure engine
+      setTimeout(() => {
+        sendToEngine('uci');
+        sendToEngine('setoption name Threads value 1');
+        sendToEngine('setoption name Contempt value 20');
+        sendToEngine(`setoption name MultiPV value ${SF_THREADS}`);
+        sendToEngine('isready');
+      }, 100);
+    };
+    
+    externalEngineWs.onmessage = (e) => {
+      const data = String(e.data || '');
+      console.log('[ExtEngine]', data);
+      
+      if (data.startsWith('iam ')) {
+        console.log('[ExtEngine] Server:', data);
+      } else if (data.startsWith('engine ')) {
+        console.log('[ExtEngine] Engine:', data);
+      } else if (data === 'authok') {
+        console.log('[ExtEngine] ✅ Authenticated');
+      } else if (data === 'autherr') {
+        console.log('[ExtEngine] ❌ Authentication failed');
+      } else if (data === 'readyok') {
+        externalEngineReady = true;
+        engineReady = true;
+        console.log('[ExtEngine] ✅ Ready!');
+      } else {
+        // Route all other messages (info, bestmove) to listeners
+        for (const fn of sfListeners) {
+          try { fn({ data }); } catch(x) {}
+        }
+      }
+    };
+    
+    externalEngineWs.onerror = (err) => {
+      console.error('[ExtEngine] ❌ Error:', err);
+      externalEngineConnected = false;
+      externalEngineReady = false;
+    };
+    
+    externalEngineWs.onclose = () => {
+      console.log('[ExtEngine] Disconnected');
+      externalEngineConnected = false;
+      externalEngineReady = false;
+      engineReady = !useExternalEngine; // Fallback to local engine
+      
+      // Auto-reconnect if external engine is enabled
+      if (useExternalEngine) {
+        console.log('[ExtEngine] Reconnecting in 3s...');
+        if (externalEngineReconnectTimer) clearTimeout(externalEngineReconnectTimer);
+        externalEngineReconnectTimer = setTimeout(() => {
+          connectExternalEngine();
+        }, 3000);
+      }
+    };
+  } catch (err) {
+    console.error('[ExtEngine] Failed to connect:', err);
+    externalEngineConnected = false;
+    externalEngineReady = false;
+    engineReady = !useExternalEngine; // Fallback to local engine
+  }
+}
+
+function disconnectExternalEngine() {
+  if (externalEngineReconnectTimer) {
+    clearTimeout(externalEngineReconnectTimer);
+    externalEngineReconnectTimer = null;
+  }
+  
+  if (externalEngineWs) {
+    externalEngineWs.close();
+    externalEngineWs = null;
+  }
+  
+  externalEngineConnected = false;
+  externalEngineReady = false;
+}
+
 // --- Stockfish ---
 const SF_THREADS = 4;
 const sfListeners = new Set();
@@ -402,14 +513,54 @@ stockfish.onmessage = (e) => {
   }
 };
 
+// --- Engine Abstraction Layer ---
+function sendToEngine(cmd) {
+  if (useExternalEngine && externalEngineConnected && externalEngineWs) {
+    externalEngineWs.send(cmd);
+  } else {
+    stockfish.postMessage(cmd);
+  }
+}
+
 function configureEngine() {
   return new Promise((resolve) => {
     console.log('[Engine] Configuring...');
-    stockfish.postMessage('uci');
-    stockfish.postMessage('setoption name Threads value 1');
-    stockfish.postMessage('setoption name Contempt value 20');
-    stockfish.postMessage(`setoption name MultiPV value ${SF_THREADS}`);
-    stockfish.postMessage('isready');
+    
+    if (useExternalEngine) {
+      // Connect to external engine
+      connectExternalEngine();
+      
+      // Wait for external engine to be ready
+      const checkReady = setInterval(() => {
+        if (externalEngineReady) {
+          clearInterval(checkReady);
+          resolve();
+        }
+      }, 50);
+
+      setTimeout(() => {
+        clearInterval(checkReady);
+        if (!externalEngineReady) {
+          console.log('[Engine] External engine timeout, falling back to local');
+          useExternalEngine = false;
+          engineReady = false;
+          configureLocalEngine().then(resolve);
+        }
+      }, 5000);
+    } else {
+      configureLocalEngine().then(resolve);
+    }
+  });
+}
+
+function configureLocalEngine() {
+  return new Promise((resolve) => {
+    console.log('[Engine] Configuring local Stockfish...');
+    sendToEngine('uci');
+    sendToEngine('setoption name Threads value 1');
+    sendToEngine('setoption name Contempt value 20');
+    sendToEngine(`setoption name MultiPV value ${SF_THREADS}`);
+    sendToEngine('isready');
 
     const checkReady = setInterval(() => {
       if (engineReady) {
@@ -509,14 +660,14 @@ function getMultiPV(fen, retryCount = 0) {
     }, isLowTime ? 400 : 2000);
 
     sfListeners.add(handler);
-    stockfish.postMessage('stop');
-    stockfish.postMessage('position fen ' + fen);
+    sendToEngine('stop');
+    sendToEngine('position fen ' + fen);
 
     if (isLowTime) {
         // PANIC MODE: Depth 1 is instant. Movetime 1 still has overhead.
-        stockfish.postMessage('go depth 1');
+        sendToEngine('go depth 1');
     } else {
-        stockfish.postMessage(`go movetime ${engineTime}`);
+        sendToEngine(`go movetime ${engineTime}`);
     }
   });
 }
@@ -997,6 +1148,74 @@ async function run() {
   };
   if (btnCont) btnCont.appendChild(varyBtn);
 
+  // 8. External Engine Toggle
+  const extEngineBtn = document.createElement('button');
+  
+  function updateExtEngineBtn() {
+    if (useExternalEngine) {
+      if (externalEngineConnected) {
+        extEngineBtn.innerText = 'Ext-✓';
+        extEngineBtn.style.backgroundColor = "#27AE60";
+      } else {
+        extEngineBtn.innerText = 'Ext-⟳';
+        extEngineBtn.style.backgroundColor = "#F39C12";
+      }
+    } else {
+      extEngineBtn.innerText = 'Ext-OFF';
+      extEngineBtn.style.backgroundColor = "";
+    }
+  }
+  
+  extEngineBtn.classList.add('fbt');
+  extEngineBtn.style.fontSize = "9px";
+  extEngineBtn.title = "Toggle External Engine";
+  updateExtEngineBtn();
+  
+  extEngineBtn.onclick = () => {
+    useExternalEngine = !useExternalEngine;
+    localStorage.setItem('useExternalEngine', useExternalEngine ? "1" : "0");
+    
+    if (useExternalEngine) {
+      // Switch to external engine
+      engineReady = false;
+      connectExternalEngine();
+    } else {
+      // Switch back to local engine
+      disconnectExternalEngine();
+      engineReady = true;
+    }
+    
+    updateExtEngineBtn();
+  };
+  
+  // Update button status periodically
+  setInterval(updateExtEngineBtn, 1000);
+  
+  if (btnCont) btnCont.appendChild(extEngineBtn);
+  
+  // 9. External Engine Config
+  const extConfigBtn = document.createElement('button');
+  extConfigBtn.innerText = '⚙️';
+  extConfigBtn.classList.add('fbt');
+  extConfigBtn.style.fontSize = "11px";
+  extConfigBtn.style.padding = "2px 6px";
+  extConfigBtn.title = "Configure External Engine URL";
+  extConfigBtn.onclick = () => {
+    const newUrl = prompt('External Engine WebSocket URL:', externalEngineUrl);
+    if (newUrl && newUrl.trim()) {
+      externalEngineUrl = newUrl.trim();
+      localStorage.setItem('externalEngineUrl', externalEngineUrl);
+      console.log('[ExtEngine] URL updated to:', externalEngineUrl);
+      
+      // Reconnect if currently using external engine
+      if (useExternalEngine) {
+        disconnectExternalEngine();
+        setTimeout(() => connectExternalEngine(), 500);
+      }
+    }
+  };
+  if (btnCont) btnCont.appendChild(extConfigBtn);
+
   // Stats Display
   const stats = document.createElement('span');
   stats.id = 'human-stats';
@@ -1030,6 +1249,7 @@ async function run() {
     if (e.key === "p") pieceBtn.click();
     if (e.key === "h") humanBtn.click();
     if (e.key === "v") varyBtn.click();
+    if (e.key === "e") extEngineBtn.click();
   });
 }
 
