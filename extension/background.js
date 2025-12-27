@@ -89,6 +89,7 @@ function broadcast(msg) {
     try {
       port.postMessage(msg);
     } catch (e) {
+      console.warn('[Background] Failed to send message to port, removing:', e.message);
       connectedPorts.delete(port);
     }
   }

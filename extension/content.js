@@ -1,8 +1,14 @@
 // Bridge between page and background service worker
 let port = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 10;
+const BASE_RECONNECT_DELAY = 1000;
 
 function connectToBackground() {
   port = chrome.runtime.connect({ name: 'engine-bridge' });
+  
+  // Reset reconnect counter on successful connection
+  reconnectAttempts = 0;
   
   port.onMessage.addListener((msg) => {
     // Forward to page
@@ -10,8 +16,17 @@ function connectToBackground() {
   });
   
   port.onDisconnect.addListener(() => {
-    console.log('[Content] Disconnected from background, reconnecting...');
-    setTimeout(connectToBackground, 1000);
+    console.log('[Content] Disconnected from background');
+    
+    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+      // Exponential backoff: 1s, 2s, 4s, 8s, up to 16s
+      const delay = Math.min(BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempts), 16000);
+      reconnectAttempts++;
+      console.log(`[Content] Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+      setTimeout(connectToBackground, delay);
+    } else {
+      console.error('[Content] Max reconnection attempts reached, giving up');
+    }
   });
 }
 
