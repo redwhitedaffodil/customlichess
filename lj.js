@@ -887,8 +887,17 @@ async function processTurn() {
       pendingMove = false;
     }
   } catch (err) {
+    console.error('[ProcessTurn] Error:', err);
     isProcessing = false;
     pendingMove = false;
+  } finally {
+    // Ensure isProcessing is always reset after a timeout, even if something goes wrong
+    setTimeout(() => {
+      if (isProcessing && !pendingMove) {
+        console.log('[ProcessTurn] Lock timeout - resetting isProcessing');
+        isProcessing = false;
+      }
+    }, 5000);
   }
 }
 
@@ -896,7 +905,7 @@ async function processTurn() {
 function syncGameState() {
   try {
     game = new Chess();
-    const moves = $('kwdb, u8t');
+    const moves = $('.moves move, .tview2 move');
     for (let i = 0; i < moves.length; i++) {
       const moveText = moves[i].textContent.replace('✓', '').trim();
       if (moveText) try { game.move(moveText); } catch(e) {}
@@ -1005,7 +1014,8 @@ async function run() {
       if (mut.addedNodes.length === 0) continue;
       if (mut.addedNodes[0].tagName === "I5Z") continue;
 
-      const lastEl = $('l4x')[0]?.lastChild;
+      const moveListEl = $('.moves, .tview2')[0];
+      const lastEl = moveListEl?.lastChild;
       if (!lastEl) continue;
 
       try { game.move(lastEl.textContent); } catch (e) {}
@@ -1022,8 +1032,12 @@ async function run() {
     }
   });
 
-  waitForElement('rm6').then((el) => {
-    moveObs.observe(el, { childList: true, subtree: true });
+  waitForElement('.cg-wrap').then(() => {
+    // Observe the move list container for changes
+    const moveListContainer = $('.moves, .tview2')[0];
+    if (moveListContainer) {
+      moveObs.observe(moveListContainer.parentElement || document.body, { childList: true, subtree: true });
+    }
     syncGameState();
     setTimeout(processTurn, 500);
   });
@@ -1262,4 +1276,4 @@ async function run() {
   });
 }
 
-waitForElement('rm6').then(() => run());
+waitForElement('.cg-wrap').then(() => run());
