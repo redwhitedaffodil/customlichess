@@ -5,6 +5,10 @@
 // NOTE: Lichess is a single-page app (SPA). Games often start without a full page reload,
 // so we must NOT exit early on the homepage. We simply wait for game DOM nodes to appear.
 
+// --- jQuery Replacement Helper ---
+// Simple querySelectorAll helper to replace jQuery $ function
+const $ = (s) => document.querySelectorAll(s);
+
 // --- socket wrapper ---
 let webSocketWrapper = null;
 let currentAck = 0;
@@ -846,8 +850,17 @@ async function processTurn() {
       pendingMove = false;
     }
   } catch (err) {
+    console.error('[ProcessTurn] Error:', err);
     isProcessing = false;
     pendingMove = false;
+  } finally {
+    // Ensure isProcessing is always reset after a timeout, even if something goes wrong
+    setTimeout(() => {
+      if (isProcessing && !pendingMove) {
+        console.log('[ProcessTurn] Lock timeout - resetting isProcessing');
+        isProcessing = false;
+      }
+    }, 5000);
   }
 }
 
@@ -855,7 +868,7 @@ async function processTurn() {
 function syncGameState() {
   try {
     game = new Chess();
-    const moves = $('kwdb, u8t');
+    const moves = document.querySelectorAll('.moves move, .tview2 move');
     for (let i = 0; i < moves.length; i++) {
       const moveText = moves[i].textContent.replace('✓', '').trim();
       if (moveText) try { game.move(moveText); } catch(e) {}
@@ -964,7 +977,8 @@ async function run() {
       if (mut.addedNodes.length === 0) continue;
       if (mut.addedNodes[0].tagName === "I5Z") continue;
 
-      const lastEl = $('l4x')[0]?.lastChild;
+      const moveListEl = document.querySelector('.moves, .tview2');
+      const lastEl = moveListEl?.lastChild;
       if (!lastEl) continue;
 
       try { game.move(lastEl.textContent); } catch (e) {}
@@ -981,8 +995,12 @@ async function run() {
     }
   });
 
-  waitForElement('rm6').then((el) => {
-    moveObs.observe(el, { childList: true, subtree: true });
+  waitForElement('.cg-wrap').then(() => {
+    // Observe the move list container for changes
+    const moveListContainer = document.querySelector('.moves, .tview2');
+    if (moveListContainer) {
+      moveObs.observe(moveListContainer.parentElement || document.body, { childList: true, subtree: true });
+    }
     syncGameState();
     setTimeout(processTurn, 500);
   });
@@ -1207,12 +1225,14 @@ async function run() {
     }
   }, 1000);
 
-  $('.fbt').on('mousedown', function() {
-    this.style.border = '6px solid blue';
-    setTimeout((a) => { a.style.border = ''; }, 500, this);
+  document.querySelectorAll('.fbt').forEach(btn => {
+    btn.addEventListener('mousedown', function() {
+      this.style.border = '6px solid blue';
+      setTimeout((a) => { a.style.border = ''; }, 500, this);
+    });
   });
 
-  $(document).on("keydown", (e) => {
+  document.addEventListener("keydown", (e) => {
     if (e.key === "w") { hintBtn.click(); autoBtn.click(); }
     if (e.key === "p") pieceBtn.click();
     if (e.key === "h") humanBtn.click();
@@ -1221,4 +1241,4 @@ async function run() {
   });
 }
 
-waitForElement('rm6').then(() => run());
+waitForElement('.cg-wrap').then(() => run());
