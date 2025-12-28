@@ -868,7 +868,7 @@ async function processTurn() {
 function syncGameState() {
   try {
     game = new Chess();
-    const moves = document.querySelectorAll('.moves move, .tview2 move');
+    const moves = $('.moves move, .tview2 move');
     for (let i = 0; i < moves.length; i++) {
       const moveText = moves[i].textContent.replace('✓', '').trim();
       if (moveText) try { game.move(moveText); } catch(e) {}
@@ -1225,12 +1225,18 @@ async function run() {
     }
   }, 1000);
 
-  document.querySelectorAll('.fbt').forEach(btn => {
-    btn.addEventListener('mousedown', function() {
-      this.style.border = '6px solid blue';
-      setTimeout((a) => { a.style.border = ''; }, 500, this);
-    });
-  });
+  // Add event listeners to buttons (wrapped in setTimeout to ensure buttons are rendered)
+  setTimeout(() => {
+    const buttons = document.querySelectorAll('.fbt');
+    if (buttons.length > 0) {
+      buttons.forEach(btn => {
+        btn.addEventListener('mousedown', function() {
+          this.style.border = '6px solid blue';
+          setTimeout((a) => { a.style.border = ''; }, 500, this);
+        });
+      });
+    }
+  }, 100);
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "w") { hintBtn.click(); autoBtn.click(); }
